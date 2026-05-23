@@ -1,17 +1,24 @@
 import { Module } from '@nestjs/common';
-import { ConfigModule } from '@nestjs/config';
+import { ConfigModule, ConfigService } from '@nestjs/config';
+import { TypeOrmModule } from '@nestjs/typeorm';
 import configuration from './config/configuration';
+import { getDatabaseConfig } from './config/database.config';
+import { UsersModule } from './users/users.module';
 
 /**
  * Root Application Module
- * 
+ *
  * This is the main module that bootstraps the NestJS application.
  * It imports the ConfigModule for environment variable management.
- * 
- * Additional modules will be added here as they are implemented:
+ *
+ * Modules:
+ * - ConfigModule: Environment variable management
+ * - TypeOrmModule: Database ORM for PostgreSQL
+ * - UsersModule: User management and database operations
+ *
+ * Additional modules will be added as they are implemented:
  * - AuthModule: Authentication and authorization
  * - SessionModule: Session management with Redis
- * - UsersModule: User management and database operations
  */
 @Module({
   imports: [
@@ -26,11 +33,21 @@ import configuration from './config/configuration';
       ],
       cache: true, // Cache configuration for better performance
     }),
+
+    // TypeORM Database Module
+    // Configures PostgreSQL connection with TypeORM
+    TypeOrmModule.forRootAsync({
+      imports: [ConfigModule],
+      useFactory: getDatabaseConfig,
+      inject: [ConfigService],
+    }),
+
+    // Feature Modules
+    UsersModule,
     
     // TODO: Add modules as they are implemented
     // AuthModule,
     // SessionModule,
-    // UsersModule,
   ],
   controllers: [],
   providers: [],

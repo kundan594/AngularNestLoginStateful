@@ -7,15 +7,15 @@ const routes: Routes = [
     redirectTo: '/dashboard',
     pathMatch: 'full'
   },
-  // Feature routes will be added here
+  {
+    path: 'dashboard',
+    loadChildren: () => import('./features/dashboard/dashboard.module').then(m => m.DashboardModule)
+  }
+  // Additional feature routes will be added here
   // Example:
   // {
   //   path: 'auth',
   //   loadChildren: () => import('./features/auth/auth.module').then(m => m.AuthModule)
-  // },
-  // {
-  //   path: 'dashboard',
-  //   loadChildren: () => import('./features/dashboard/dashboard.module').then(m => m.DashboardModule)
   // }
 ];
 

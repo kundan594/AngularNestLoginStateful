@@ -1,0 +1,2 @@
+# This directory will contain custom middleware
+# Middleware processes requests before they reach route handlers

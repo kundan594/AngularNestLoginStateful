@@ -1,0 +1,2 @@
+# This directory will contain interceptors
+# Interceptors transform responses and handle cross-cutting concerns

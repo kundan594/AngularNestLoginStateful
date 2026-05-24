@@ -5,6 +5,170 @@ All notable changes to this project will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [0.3.0] - 2026-05-24
+
+### Added
+
+#### Phase 3: Database Migrations, REST API & Testing
+
+**Overview:**
+Implemented production-ready database migrations, REST API endpoints for user management, database seeding capabilities, and comprehensive end-to-end testing. This phase transitions from auto-synchronization to proper migration-based schema management and adds full CRUD API endpoints with validation.
+
+**Database Migrations:**
+
+1. **Migration Infrastructure:**
+   - Created `backend/src/database/data-source.ts` - TypeORM DataSource configuration for migrations
+   - Configured migration paths and entity loading
+   - Disabled synchronize in favor of migrations for production safety
+   - Added environment-based logging
+
+2. **Users Table Migration:**
+   - Created `backend/src/database/migrations/1700000000000-CreateUsersTable.ts`
+   - Comprehensive users table schema with UUID primary key
+   - Columns: id (UUID), email (unique), password, firstName, lastName, isActive, createdAt, updatedAt
+   - Database indexes for performance:
+     - `IDX_USERS_EMAIL` - Fast email lookups for authentication
+     - `IDX_USERS_IS_ACTIVE` - Efficient filtering of active users
+   - Proper up/down migration methods for rollback support
+
+**Database Seeding:**
+
+1. **Seed Infrastructure:**
+   - Created `backend/src/database/scripts/seed.ts` - Main seeding script
+   - Created `backend/src/database/seeds/index.ts` - Seed orchestration
+   - Created `backend/src/database/seeds/user.seed.ts` - User data seeding
+   - Automated test data generation for development
+
+2. **Seed Features:**
+   - Creates default admin and test users
+   - Proper password hashing for seeded users
+   - Idempotent seeding (checks for existing data)
+   - Error handling and transaction support
+
+**REST API Implementation:**
+
+1. **Users Controller:**
+   - Created `backend/src/users/users.controller.ts`
+   - Full CRUD REST API endpoints:
+     - `POST /users` - Create new user (201 Created)
+     - `GET /users` - List all users (200 OK)
+     - `GET /users/:id` - Get user by ID (200 OK)
+     - `PATCH /users/:id` - Update user (200 OK)
+     - `DELETE /users/:id` - Soft delete user (204 No Content)
+   - Security features:
+     - Password excluded from all responses
+     - UUID validation with ParseUUIDPipe
+     - Proper HTTP status codes
+   - Comprehensive JSDoc documentation
+
+2. **Module Updates:**
+   - Modified `backend/src/users/users.module.ts`
+   - Registered UsersController
+   - Exported UsersService for auth module integration
+
+**End-to-End Testing:**
+
+1. **E2E Test Suite:**
+   - Created `backend/test/users.e2e-spec.ts`
+   - Comprehensive test coverage for all endpoints:
+     - User creation with validation
+     - Duplicate email detection (409 Conflict)
+     - Invalid email format validation (400 Bad Request)
+     - Password length validation (400 Bad Request)
+     - User listing and retrieval
+     - User updates
+     - Soft deletion
+     - 404 handling for non-existent users
+     - UUID validation (400 Bad Request)
+   - Proper test lifecycle management
+   - Database cleanup after tests
+
+2. **Testing Infrastructure:**
+   - Integration with NestJS testing module
+   - Supertest for HTTP request testing
+   - ValidationPipe configuration in tests
+   - Test data isolation and cleanup
+
+**Package Updates:**
+
+Modified `backend/package.json` and `backend/package-lock.json`:
+- Added `@types/supertest@^6.0.2` - TypeScript types for E2E testing
+- Added `supertest@^6.3.3` - HTTP assertion library for testing
+- Updated test scripts for E2E testing
+
+**Documentation Updates:**
+
+Modified `HOW_TO_RUN.md`:
+- Added migration commands documentation
+- Added seeding instructions
+- Updated testing section with E2E test commands
+- Added API endpoint documentation
+
+**Files Created:**
+- `backend/src/database/data-source.ts`
+- `backend/src/database/migrations/1700000000000-CreateUsersTable.ts`
+- `backend/src/database/scripts/seed.ts`
+- `backend/src/database/seeds/index.ts`
+- `backend/src/database/seeds/user.seed.ts`
+- `backend/src/users/users.controller.ts`
+- `backend/src/users/users.service.spec.ts`
+- `backend/test/users.e2e-spec.ts`
+
+**Files Modified:**
+- `backend/package.json` - Added testing dependencies
+- `backend/package-lock.json` - Updated dependency lock
+- `backend/src/users/users.module.ts` - Registered controller
+- `HOW_TO_RUN.md` - Updated documentation
+
+**Migration Commands:**
+```bash
+# Generate new migration
+npm run migration:generate -- src/database/migrations/MigrationName
+
+# Run migrations
+npm run migration:run
+
+# Revert last migration
+npm run migration:revert
+
+# Show migration status
+npm run migration:show
+```
+
+**Seeding Commands:**
+```bash
+# Run database seeds
+npm run seed
+```
+
+**Testing Commands:**
+```bash
+# Run E2E tests
+npm run test:e2e
+
+# Run unit tests
+npm run test
+
+# Run tests with coverage
+npm run test:cov
+```
+
+**Impact:**
+- Production-ready database schema management with migrations
+- Full REST API for user management with proper validation
+- Comprehensive E2E test coverage ensuring API reliability
+- Database seeding for development and testing
+- Proper separation of concerns (migrations vs. synchronization)
+- Foundation ready for authentication implementation (Phase 4)
+
+**Next Steps:**
+1. Run migrations: `npm run migration:run`
+2. Seed database: `npm run seed`
+3. Run E2E tests: `npm run test:e2e`
+4. Ready for Phase 4: Authentication & Session Management
+
+---
+
 ## [0.2.0] - 2026-05-23
 
 ### Added

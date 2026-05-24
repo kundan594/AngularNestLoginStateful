@@ -83,6 +83,11 @@ npm install
 # Copy environment file (first time only)
 cp .env.example .env
 
+npm install
+npm run migration:run
+npm run seed
+npm run start:dev
+
 # Start the backend in development mode
 npm run start:dev
 ```

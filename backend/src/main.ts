@@ -1,7 +1,7 @@
 import { NestFactory } from '@nestjs/core';
 import { ValidationPipe } from '@nestjs/common';
 import { AppModule } from './app.module';
-import * as passport from 'passport';
+import passport from 'passport';
 import session from 'express-session';
 import { ConfigService } from '@nestjs/config';
 

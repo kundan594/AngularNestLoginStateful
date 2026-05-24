@@ -1,18 +1,26 @@
 import { NestFactory } from '@nestjs/core';
 import { ValidationPipe } from '@nestjs/common';
 import { AppModule } from './app.module';
-import helmet from 'helmet';
+import * as passport from 'passport';
+import session from 'express-session';
+import { ConfigService } from '@nestjs/config';
 
 /**
  * Bootstrap the NestJS application
- * Sets up security middleware, CORS, and global validation
+ * Sets up security middleware, CORS, sessions, Passport, and global validation
  */
 async function bootstrap() {
   const app = await NestFactory.create(AppModule);
+  const configService = app.get(ConfigService);
 
-  // Security: Apply Helmet middleware for secure HTTP headers
-  // Protects against common web vulnerabilities (XSS, clickjacking, etc.)
-  app.use(helmet());
+  // Session Configuration
+  // Must be configured before Passport initialization
+  const sessionConfig = configService.get('session');
+  app.use(session(sessionConfig));
+
+  // Initialize Passport and session support
+  app.use(passport.initialize());
+  app.use(passport.session());
 
   // CORS Configuration
   // TODO: Configure based on environment (development vs production)

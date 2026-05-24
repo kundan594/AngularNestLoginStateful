@@ -4,6 +4,7 @@ import { TypeOrmModule } from '@nestjs/typeorm';
 import configuration from './config/configuration';
 import { getDatabaseConfig } from './config/database.config';
 import { UsersModule } from './users/users.module';
+import { AuthModule } from './auth/auth.module';
 
 /**
  * Root Application Module
@@ -15,10 +16,10 @@ import { UsersModule } from './users/users.module';
  * - ConfigModule: Environment variable management
  * - TypeOrmModule: Database ORM for PostgreSQL
  * - UsersModule: User management and database operations
+ * - AuthModule: Authentication and authorization with Passport
  *
  * Additional modules will be added as they are implemented:
- * - AuthModule: Authentication and authorization
- * - SessionModule: Session management with Redis
+ * - SessionModule: Session management with Redis (configured in main.ts)
  */
 @Module({
   imports: [
@@ -44,9 +45,9 @@ import { UsersModule } from './users/users.module';
 
     // Feature Modules
     UsersModule,
+    AuthModule,
     
     // TODO: Add modules as they are implemented
-    // AuthModule,
     // SessionModule,
   ],
   controllers: [],

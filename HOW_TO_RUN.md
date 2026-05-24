@@ -90,6 +90,22 @@ npm run start:dev
 
 # Start the backend in development mode
 npm run start:dev
+
+
+npm install
+npm run migration:run
+npm run seed
+npm run start:dev
+
+
+ console.log('  - admin@example.com / Admin123!');
+  console.log('  - john.doe@example.com / Password123!');
+  console.log('  - jane.smith@example.com / Password123!');
+
+
+  curl -X POST http://localhost:3000/auth/login \
+  -H "Content-Type: application/json" \
+  -d '{"email":"admin@example.com","password":"Admin123!"}'
 ```
 
 **Expected Output:**

@@ -4,6 +4,271 @@ All notable changes to this project will be documented in this file.
 
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
+## [0.4.0] - 2026-05-24
+
+### Added
+
+#### Phase 4: Authentication Core - Passport.js Integration
+
+**Overview:**
+Implemented complete authentication system using Passport.js with local strategy, session-based authentication, and comprehensive security features. This phase adds login/logout functionality, session management, route protection, and full test coverage for authentication flows.
+
+**Passport.js Integration:**
+
+1. **Dependencies Added:**
+   - `@nestjs/passport@^10.0.3` - NestJS Passport integration
+   - `passport@^0.7.0` - Authentication middleware for Node.js
+   - `passport-local@^1.0.0` - Username/password authentication strategy
+   - `express-session@^1.17.3` - Session middleware (already configured)
+   - `@types/passport@^1.0.16` - TypeScript types for Passport
+   - `@types/passport-local@^1.0.38` - TypeScript types for passport-local
+   - `@types/express-session@^1.17.10` - TypeScript types for express-session
+
+2. **Authentication Strategy:**
+   - Created `backend/src/auth/strategies/local.strategy.ts` - Passport local strategy
+   - Validates user credentials using email/password
+   - Integrates with UsersService for user lookup and password verification
+   - Throws UnauthorizedException for invalid credentials
+   - Uses email as username field instead of default username
+
+3. **Session Serialization:**
+   - Created `backend/src/auth/session.serializer.ts` - Session serializer
+   - `serializeUser()` - Stores only user ID in session (minimizes session data)
+   - `deserializeUser()` - Retrieves full user object from stored ID
+   - Keeps user data fresh on each request
+   - Proper error handling for missing users
+
+**Authentication Module:**
+
+1. **Auth Service:**
+   - Created `backend/src/auth/auth.service.ts` - Core authentication logic
+   - `validateUser()` - Validates email/password credentials
+   - `getUserById()` - Retrieves user for session deserialization
+   - Password verification using bcrypt
+   - Active user check before authentication
+   - Password exclusion from all responses
+
+2. **Auth Controller:**
+   - Created `backend/src/auth/auth.controller.ts` - Authentication endpoints
+   - `POST /auth/login` - User login (200 OK)
+     - Validates credentials using LocalAuthGuard
+     - Creates session on successful authentication
+     - Returns user object without password
+   - `POST /auth/logout` - User logout (200 OK)
+     - Requires authentication
+     - Destroys session completely
+     - Returns success message
+   - `GET /auth/session` - Get current session (requires auth)
+     - Returns authenticated user and session info
+     - Protected by AuthenticatedGuard
+   - `GET /auth/status` - Check authentication status (public)
+     - Returns authentication status and user if logged in
+     - No authentication required
+
+3. **Auth Module:**
+   - Created `backend/src/auth/auth.module.ts` - Authentication module
+   - Imports UsersModule for user operations
+   - Registers Passport with session support
+   - Provides AuthService, LocalStrategy, SessionSerializer
+   - Exports AuthService for use in other modules
+
+**Authentication Guards:**
+
+1. **LocalAuthGuard:**
+   - Created `backend/src/auth/guards/local-auth.guard.ts`
+   - Extends Passport's AuthGuard('local')
+   - Applied to login endpoint
+   - Triggers LocalStrategy validation
+   - Establishes session on successful login
+
+2. **AuthenticatedGuard:**
+   - Created `backend/src/auth/guards/authenticated.guard.ts`
+   - Protects routes requiring authentication
+   - Uses Passport's `isAuthenticated()` method
+   - Returns 403 Forbidden if not authenticated
+   - Applied to protected endpoints
+
+**Data Transfer Objects:**
+
+1. **Login DTO:**
+   - Created `backend/src/auth/dto/login.dto.ts`
+   - Email validation (valid format, required)
+   - Password validation (minimum 6 characters, required)
+   - Uses class-validator decorators
+   - Comprehensive error messages
+
+**Type Definitions:**
+
+1. **Express Type Extensions:**
+   - Created `backend/src/types/express.d.ts`
+   - Extends Express Request interface with `user` property
+   - Adds TypeScript support for Passport user object
+   - Enables type-safe access to `req.user` throughout application
+
+**Application Integration:**
+
+1. **Main Application Updates:**
+   - Modified `backend/src/main.ts`
+   - Added Passport initialization
+   - Configured session middleware from ConfigService
+   - Initialized Passport session support
+   - Proper middleware ordering (session before Passport)
+
+2. **App Module Updates:**
+   - Modified `backend/src/app.module.ts`
+   - Imported and registered AuthModule
+   - Updated module documentation
+
+**Testing:**
+
+1. **Unit Tests:**
+   - Created `backend/src/auth/auth.service.spec.ts`
+   - Tests for validateUser():
+     - Valid credentials return user without password
+     - Invalid email returns null
+     - Inactive user returns null
+     - Invalid password returns null
+   - Tests for getUserById():
+     - Returns user when found
+     - Returns null when not found
+   - Comprehensive mocking of UsersService
+
+2. **E2E Tests:**
+   - Created `backend/test/auth.e2e-spec.ts`
+   - Login endpoint tests:
+     - Successful login with valid credentials
+     - Failed login with invalid email
+     - Failed login with invalid password
+     - Validation errors (missing fields, invalid format, short password)
+     - Session cookie handling
+   - Session endpoint tests:
+     - Returns session info when authenticated
+     - Returns 403 when not authenticated
+   - Status endpoint tests:
+     - Returns authenticated status when logged in
+     - Returns unauthenticated status when not logged in
+   - Logout endpoint tests:
+     - Successful logout destroys session
+     - Returns 403 when not authenticated
+   - Uses supertest agent for session persistence
+
+**Security Features:**
+
+1. **Password Security:**
+   - Passwords hashed with bcrypt (10 salt rounds)
+   - Never returned in API responses
+   - Secure validation without exposing timing attacks
+
+2. **Session Security:**
+   - HTTP-only cookies prevent XSS attacks
+   - Secure flag in production (HTTPS only)
+   - Session expiration (30 minutes default)
+   - Redis-backed storage for scalability
+
+3. **Input Validation:**
+   - Email format validation
+   - Password length requirements
+   - DTO-based validation with class-validator
+   - Automatic validation pipe in application
+
+4. **Route Protection:**
+   - Guard-based authentication
+   - Automatic 403 responses for unauthorized access
+   - Type-safe user access in controllers
+
+**Files Created:**
+- `backend/src/auth/dto/login.dto.ts`
+- `backend/src/auth/strategies/local.strategy.ts`
+- `backend/src/auth/guards/authenticated.guard.ts`
+- `backend/src/auth/guards/local-auth.guard.ts`
+- `backend/src/auth/auth.service.ts`
+- `backend/src/auth/auth.service.spec.ts`
+- `backend/src/auth/auth.controller.ts`
+- `backend/src/auth/auth.module.ts`
+- `backend/src/auth/session.serializer.ts`
+- `backend/src/types/express.d.ts`
+- `backend/test/auth.e2e-spec.ts`
+- `PHASE_4_IMPLEMENTATION.md`
+
+**Files Modified:**
+- `backend/package.json` - Added Passport dependencies
+- `backend/package-lock.json` - Updated dependency lock
+- `backend/src/main.ts` - Added Passport initialization
+- `backend/src/app.module.ts` - Imported AuthModule
+
+**Authentication Flow:**
+
+1. **Login Flow:**
+   - Client sends POST to `/auth/login` with email/password
+   - LocalAuthGuard triggers LocalStrategy
+   - LocalStrategy calls AuthService.validateUser()
+   - AuthService validates credentials via UsersService
+   - On success, SessionSerializer.serializeUser() stores user ID
+   - Session cookie sent to client
+   - User object returned (without password)
+
+2. **Session Validation Flow:**
+   - Client sends request with session cookie
+   - Passport deserializes session using SessionSerializer
+   - AuthenticatedGuard checks if user is authenticated
+   - Request proceeds if authenticated, 403 if not
+
+3. **Logout Flow:**
+   - Client sends POST to `/auth/logout`
+   - AuthenticatedGuard validates session
+   - Passport logout() called
+   - Session destroyed in Redis
+   - Success message returned
+
+**Testing Commands:**
+```bash
+# Run unit tests
+npm run test
+
+# Run E2E tests
+npm run test:e2e
+
+# Run tests with coverage
+npm run test:cov
+```
+
+**API Testing Examples:**
+```bash
+# Login
+curl -X POST http://localhost:3000/auth/login \
+  -H "Content-Type: application/json" \
+  -d '{"email":"admin@example.com","password":"Admin123!"}' \
+  -c cookies.txt
+
+# Check session
+curl -X GET http://localhost:3000/auth/session -b cookies.txt
+
+# Check status (public)
+curl -X GET http://localhost:3000/auth/status
+
+# Logout
+curl -X POST http://localhost:3000/auth/logout -b cookies.txt
+```
+
+**Impact:**
+- Complete authentication system with Passport.js
+- Session-based authentication with Redis storage
+- Secure password handling and validation
+- Protected routes with guards
+- Comprehensive test coverage (unit + E2E)
+- Type-safe implementation with TypeScript
+- Ready for CSRF protection (Phase 5)
+- Foundation for frontend authentication integration
+
+**Next Steps:**
+1. Install dependencies: `npm install` in backend directory
+2. Run migrations: `npm run migration:run`
+3. Seed database: `npm run seed`
+4. Run tests: `npm run test:e2e`
+5. Ready for Phase 5: CSRF Protection
+
+---
+
 
 ## [0.3.0] - 2026-05-24
 

@@ -1,6 +1,8 @@
-import { Injectable } from '@angular/core';
-import { BehaviorSubject } from 'rxjs';
-import { Session } from '../../models/session.model';
+import { Injectable, OnDestroy } from '@angular/core';
+import { BehaviorSubject, Subscription } from 'rxjs';
+import { Session, SessionStatus } from '../../models/session.model';
+import { BroadcastService } from './broadcast.service';
+import { AuthService } from './auth.service';
 
 /**
  * Session Service
@@ -11,10 +13,12 @@ import { Session } from '../../models/session.model';
 @Injectable({
   providedIn: 'root',
 })
-export class SessionService {
+export class SessionService implements OnDestroy {
   private sessionSubject = new BehaviorSubject<Session | null>(null);
   private sessionWarningSubject = new BehaviorSubject<boolean>(false);
   private sessionExpiryTimer: any;
+  private warningTimer: any;
+  private readonly broadcastSubscription: Subscription;
 
   public session$ = this.sessionSubject.asObservable();
   public sessionWarning$ = this.sessionWarningSubject.asObservable();
@@ -23,7 +27,14 @@ export class SessionService {
   private readonly SESSION_DURATION = 30 * 60 * 1000; // 30 minutes
   private readonly WARNING_THRESHOLD = 5 * 60 * 1000; // 5 minutes before expiry
 
-  constructor() {}
+  constructor(
+    private broadcastService: BroadcastService,
+    private authService: AuthService,
+  ) {
+    this.broadcastSubscription = this.broadcastService.messages$.subscribe((message) => {
+      this.handleBroadcastMessage(message);
+    });
+  }
 
   /**
    * Get current session value
@@ -48,15 +59,11 @@ export class SessionService {
     const now = new Date();
     const expiresAt = new Date(now.getTime() + this.SESSION_DURATION);
 
-    const session: Session = {
+    this.applySessionState(userId, now, expiresAt);
+    this.broadcastService.broadcast('login', {
       userId,
-      createdAt: now,
-      expiresAt,
-      lastActivity: now,
-    };
-
-    this.sessionSubject.next(session);
-    this.startExpiryTimer(expiresAt);
+      expiresAt: expiresAt.getTime(),
+    });
   }
 
   /**
@@ -72,24 +79,19 @@ export class SessionService {
     const now = new Date();
     const expiresAt = new Date(now.getTime() + this.SESSION_DURATION);
 
-    const updatedSession: Session = {
-      ...currentSession,
-      lastActivity: now,
-      expiresAt,
-    };
-
-    this.sessionSubject.next(updatedSession);
-    this.sessionWarningSubject.next(false);
-    this.startExpiryTimer(expiresAt);
+    this.applySessionState(currentSession.userId, currentSession.createdAt, expiresAt, now);
+    this.broadcastService.broadcast('extend', {
+      userId: currentSession.userId,
+      expiresAt: expiresAt.getTime(),
+    });
   }
 
   /**
    * End the current session
    */
   endSession(): void {
-    this.sessionSubject.next(null);
-    this.sessionWarningSubject.next(false);
-    this.clearExpiryTimer();
+    this.clearLocalSession();
+    this.broadcastService.broadcast('logout');
   }
 
   /**
@@ -125,6 +127,48 @@ export class SessionService {
   }
 
   /**
+   * Apply a session start received from another tab.
+   */
+  syncSessionStart(userId: string, expiresAt?: number): void {
+    const now = new Date();
+    const resolvedExpiresAt = expiresAt ? new Date(expiresAt) : new Date(now.getTime() + this.SESSION_DURATION);
+
+    this.applySessionState(userId, now, resolvedExpiresAt);
+  }
+
+  /**
+   * Apply a session extension received from another tab.
+   */
+  syncSessionExtension(expiresAt?: number): void {
+    const currentSession = this.sessionSubject.value;
+    if (!currentSession) {
+      return;
+    }
+
+    const now = new Date();
+    const resolvedExpiresAt = expiresAt ? new Date(expiresAt) : new Date(now.getTime() + this.SESSION_DURATION);
+
+    this.applySessionState(
+      currentSession.userId,
+      currentSession.createdAt,
+      resolvedExpiresAt,
+      now,
+    );
+  }
+
+  /**
+   * Apply a logout received from another tab.
+   */
+  syncSessionEnd(): void {
+    this.clearLocalSession();
+  }
+
+  ngOnDestroy(): void {
+    this.broadcastSubscription.unsubscribe();
+    this.clearExpiryTimer();
+  }
+
+  /**
    * Start timer to track session expiry and show warning
    */
   private startExpiryTimer(expiresAt: Date): void {
@@ -136,15 +180,19 @@ export class SessionService {
     // Set warning timer
     if (warningTime > now) {
       const warningDelay = warningTime - now;
-      setTimeout(() => {
+      this.warningTimer = setTimeout(() => {
         this.sessionWarningSubject.next(true);
+        this.broadcastService.broadcast('warning', {
+          userId: this.sessionSubject.value?.userId,
+          expiresAt: expiresAt.getTime(),
+        });
       }, warningDelay);
     }
 
     // Set expiry timer
     const expiryDelay = expiresAt.getTime() - now;
     this.sessionExpiryTimer = setTimeout(() => {
-      this.endSession();
+      this.clearLocalSession();
     }, expiryDelay);
   }
 
@@ -152,10 +200,79 @@ export class SessionService {
    * Clear expiry timer
    */
   private clearExpiryTimer(): void {
+    if (this.warningTimer) {
+      clearTimeout(this.warningTimer);
+      this.warningTimer = null;
+    }
+
     if (this.sessionExpiryTimer) {
       clearTimeout(this.sessionExpiryTimer);
       this.sessionExpiryTimer = null;
     }
+  }
+
+  /**
+   * Clear only local session state without rebroadcasting.
+   */
+  private clearLocalSession(): void {
+    this.sessionSubject.next(null);
+    this.sessionWarningSubject.next(false);
+    this.clearExpiryTimer();
+  }
+
+  /**
+   * Handle synchronization messages coming from other tabs.
+   */
+  private handleBroadcastMessage(message: SessionStatus): void {
+    switch (message.type) {
+      case 'login':
+        if (message.userId) {
+          this.syncSessionStart(message.userId, message.expiresAt);
+          this.authService.checkStatus().subscribe({
+            next: (response) => {
+              if (response.authenticated && response.user) {
+                this.authService.syncLogin(response.user);
+              }
+            },
+            error: () => {
+              this.authService.syncLogout();
+              this.clearLocalSession();
+            },
+          });
+        }
+        break;
+      case 'logout':
+        this.authService.syncLogout();
+        this.syncSessionEnd();
+        break;
+      case 'extend':
+        this.syncSessionExtension(message.expiresAt);
+        break;
+      case 'warning':
+        this.sessionWarningSubject.next(true);
+        break;
+    }
+  }
+
+  /**
+   * Apply local session state consistently.
+   */
+  private applySessionState(
+    userId: string,
+    createdAt: Date,
+    expiresAt: Date,
+    lastActivity: Date = new Date(),
+  ): void {
+    const session: Session = {
+      userId,
+      createdAt,
+      expiresAt,
+      lastActivity,
+    };
+
+    this.sessionSubject.next(session);
+    this.sessionWarningSubject.next(false);
+    this.startExpiryTimer(expiresAt);
   }
 }
 

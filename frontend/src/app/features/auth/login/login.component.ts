@@ -69,6 +69,7 @@ export class LoginComponent implements OnInit {
       next: (response) => {
         // Start session tracking
         this.sessionService.startSession(response.user.id);
+        this.loading = false;
 
         // Navigate to return URL
         this.router.navigate([this.returnUrl]);

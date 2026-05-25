@@ -7,6 +7,7 @@ import { ErrorInterceptor } from './interceptors/error.interceptor';
 import { CsrfService } from './services/csrf.service';
 import { AuthService } from './services/auth.service';
 import { SessionService } from './services/session.service';
+import { BroadcastService } from './services/broadcast.service';
 
 /**
  * CoreModule contains singleton services and should only be imported once in AppModule.
@@ -22,6 +23,7 @@ import { SessionService } from './services/session.service';
     AuthService,
     SessionService,
     CsrfService,
+    BroadcastService,
     // HTTP Interceptors (order matters!)
     {
       provide: HTTP_INTERCEPTORS,

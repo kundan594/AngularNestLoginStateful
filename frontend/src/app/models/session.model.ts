@@ -9,12 +9,19 @@ export interface Session {
 }
 
 /**
+ * Broadcast message types for cross-tab synchronization
+ */
+export type SessionBroadcastType = 'login' | 'logout' | 'extend' | 'warning';
+
+/**
  * Session status for cross-tab synchronization
  */
 export interface SessionStatus {
-  type: 'login' | 'logout' | 'refresh' | 'warning';
+  type: SessionBroadcastType;
   timestamp: number;
+  userId?: string;
   expiresAt?: number;
+  sourceTabId?: string;
 }
 
 // Made with Bob

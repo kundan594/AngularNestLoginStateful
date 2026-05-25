@@ -4,6 +4,54 @@ All notable changes to this project will be documented in this file.
 
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
 
+## [0.7.0] - 2026-05-25
+
+### Added
+
+#### Phase 7: Cross-Tab Synchronization
+
+**Overview:**
+Implemented cross-tab authentication and session synchronization for the Angular frontend. Authentication events now propagate across open browser tabs so login, logout, session extension, and warning state remain aligned.
+
+**Frontend Services:**
+
+1. **Broadcast Service:**
+   - `frontend/src/app/core/services/broadcast.service.ts`
+   - Uses the Broadcast Channel API for real-time cross-tab communication
+   - Falls back to `localStorage` storage events for unsupported browsers
+   - Defines typed session/auth event payloads
+   - Ignores self-originated messages with per-tab identifiers
+
+2. **Session Service Enhancements:**
+   - `frontend/src/app/core/services/session.service.ts`
+   - Broadcasts login, logout, session extension, and warning events
+   - Subscribes to messages from other tabs
+   - Synchronizes session timers and warning state across tabs
+   - Refreshes authenticated user state on remote login events
+
+3. **Authentication Service Enhancements:**
+   - `frontend/src/app/core/services/auth.service.ts`
+   - Broadcasts login and logout state transitions
+   - Supports remote auth synchronization with `syncLogin()` and `syncLogout()`
+   - Clears local security state consistently across synchronized logout flows
+
+**Component Updates:**
+
+1. **Login Component:**
+   - `frontend/src/app/features/auth/login/login.component.ts`
+   - Starts synchronized session tracking after successful login
+   - Resets loading state correctly after authentication
+
+2. **Dashboard Component:**
+   - `frontend/src/app/features/dashboard/dashboard.component.ts`
+   - Uses centralized logout flow to avoid duplicate broadcasts
+   - Updates session activity on initialization to extend synchronized sessions
+
+**Module Configuration:**
+- `frontend/src/app/core/core.module.ts`
+- Registers `BroadcastService` as a singleton core service
+- Keeps cross-tab synchronization available application-wide
+
 ## [0.6.0] - 2026-05-25
 
 ### Added

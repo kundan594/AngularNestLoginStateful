@@ -6,6 +6,7 @@ import { environment } from '../../../environments/environment';
 import { User } from '../../models/user.model';
 import { AuthResponse } from '../../models/auth-response.model';
 import { CsrfService } from './csrf.service';
+import { BroadcastService } from './broadcast.service';
 
 interface LoginCredentials {
   email: string;
@@ -42,6 +43,7 @@ export class AuthService {
   constructor(
     private http: HttpClient,
     private csrfService: CsrfService,
+    private broadcastService: BroadcastService,
   ) {}
 
   /**
@@ -75,6 +77,9 @@ export class AuthService {
             tap((response) => {
               this.currentUserSubject.next(response.user);
               this.isAuthenticatedSubject.next(true);
+              this.broadcastService.broadcast('login', {
+                userId: response.user.id,
+              });
             }),
             catchError((error) => {
               this.currentUserSubject.next(null);
@@ -100,12 +105,14 @@ export class AuthService {
           this.currentUserSubject.next(null);
           this.isAuthenticatedSubject.next(false);
           this.csrfService.clearToken();
+          this.broadcastService.broadcast('logout');
         }),
         catchError((error) => {
           // Even if logout fails, clear local state
           this.currentUserSubject.next(null);
           this.isAuthenticatedSubject.next(false);
           this.csrfService.clearToken();
+          this.broadcastService.broadcast('logout');
           return throwError(() => error);
         }),
       );
@@ -155,6 +162,23 @@ export class AuthService {
    * Used when session expires or on 401 errors
    */
   clearAuthState(): void {
+    this.currentUserSubject.next(null);
+    this.isAuthenticatedSubject.next(false);
+    this.csrfService.clearToken();
+  }
+
+  /**
+   * Apply authentication state changes received from another tab.
+   */
+  syncLogin(user: User): void {
+    this.currentUserSubject.next(user);
+    this.isAuthenticatedSubject.next(true);
+  }
+
+  /**
+   * Apply logout state changes received from another tab.
+   */
+  syncLogout(): void {
     this.currentUserSubject.next(null);
     this.isAuthenticatedSubject.next(false);
     this.csrfService.clearToken();

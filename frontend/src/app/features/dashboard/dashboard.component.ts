@@ -23,7 +23,7 @@ export class DashboardComponent implements OnInit {
   }
 
   ngOnInit(): void {
-    // Component initialization
+    this.sessionService.updateActivity();
   }
 
   /**
@@ -34,13 +34,11 @@ export class DashboardComponent implements OnInit {
 
     this.authService.logout().subscribe({
       next: () => {
-        this.sessionService.endSession();
         this.router.navigate(['/login']);
       },
       error: (error) => {
         console.error('Logout error:', error);
         // Even on error, redirect to login
-        this.sessionService.endSession();
         this.router.navigate(['/login']);
       }
     });

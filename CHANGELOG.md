@@ -3,6 +3,219 @@
 All notable changes to this project will be documented in this file.
 
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
+
+## [0.5.0] - 2026-05-24
+
+### Added
+
+#### Phase 5: CSRF Protection - Token-Based Security
+
+**Overview:**
+Implemented comprehensive CSRF (Cross-Site Request Forgery) protection using token-based validation. This phase adds a critical security layer to protect state-changing operations from malicious cross-site requests, following industry best practices with session-bound tokens and automatic frontend integration.
+
+**Backend CSRF Implementation:**
+
+1. **Dependencies Added:**
+   - `csrf@^3.1.0` - CSRF token generation and validation library (includes TypeScript definitions)
+
+2. **CSRF Service:**
+   - Created `backend/src/auth/csrf.service.ts` - Core CSRF token management
+   - `generateSecret()` - Creates cryptographically secure secret for session storage
+   - `generateToken(secret)` - Generates token from session secret
+   - `verifyToken(secret, token)` - Validates token against session secret
+   - Uses the `csrf` npm package (Tokens class) for secure token generation
+   - Proper TypeScript integration with default import
+
+3. **CSRF Guard:**
+   - Created `backend/src/auth/guards/csrf.guard.ts` - Route protection guard
+   - Validates CSRF tokens on state-changing requests (POST, PUT, DELETE, PATCH)
+   - Exempts safe methods (GET, HEAD, OPTIONS) from validation
+   - Checks for `X-CSRF-Token` header in requests
+   - Validates token against session-stored secret
+   - Throws ForbiddenException (403) for missing or invalid tokens
+   - Ready to apply to protected endpoints (not yet applied)
+
+4. **CSRF Endpoint:**
+   - Modified `backend/src/auth/auth.controller.ts`
+   - Added `GET /auth/csrf` endpoint
+   - Generates CSRF secret if not in session
+   - Returns token generated from secret
+   - Idempotent - same session returns same token
+   - Public endpoint (no authentication required)
+
+5. **Session Extension:**
+   - Modified `backend/src/types/express.d.ts`
+   - Added `csrfSecret?: string` to SessionData interface
+   - Type-safe access to CSRF secret in session
+   - Proper module augmentation for express-session
+
+6. **Auth Module Updates:**
+   - Modified `backend/src/auth/auth.module.ts`
+   - Added CsrfService as provider
+   - Exported CsrfService for use in other modules
+   - Updated module documentation
+
+**Frontend CSRF Implementation:**
+
+1. **CSRF Service:**
+   - Created `frontend/src/app/core/services/csrf.service.ts`
+   - Manages CSRF token lifecycle on frontend
+   - `fetchToken()` - Retrieves token from backend API
+   - `getToken()` - Returns current token synchronously
+   - `getToken$()` - Observable for reactive token access
+   - `clearToken()` - Clears stored token (on logout)
+   - `hasToken()` - Checks if token exists
+   - Uses BehaviorSubject for reactive state management
+   - Integrates with environment configuration
+
+2. **CSRF Interceptor:**
+   - Created `frontend/src/app/core/interceptors/csrf.interceptor.ts`
+   - Automatically adds CSRF token to HTTP requests
+   - Implements HttpInterceptor interface
+   - Adds `X-CSRF-Token` header to state-changing requests
+   - Exempts safe methods (GET, HEAD, OPTIONS)
+   - Only adds token if one exists in CsrfService
+   - Transparent to application code
+
+3. **Core Module Integration:**
+   - Modified `frontend/src/app/core/core.module.ts`
+   - Registered CsrfService as singleton provider
+   - Registered CsrfInterceptor as HTTP_INTERCEPTORS
+   - Multi-provider configuration for interceptor chain
+   - Ensures CSRF protection is available app-wide
+
+**Testing:**
+
+1. **Unit Tests:**
+   - Created `backend/src/auth/csrf.service.spec.ts`
+   - Tests for secret generation (uniqueness, format)
+   - Tests for token generation (from secrets, uniqueness)
+   - Tests for token verification (valid, invalid, wrong secret, empty)
+   - 8 comprehensive test cases
+   - Full coverage of CsrfService methods
+
+2. **E2E Tests:**
+   - Created `backend/test/csrf.e2e-spec.ts`
+   - Tests for CSRF token endpoint
+   - Token generation and retrieval
+   - Token persistence within session
+   - Token uniqueness across sessions
+   - GET request exemption from CSRF
+   - Login/logout flow baseline
+   - 7 comprehensive test scenarios
+
+3. **Integration Tests:**
+   - Modified `backend/test/auth.e2e-spec.ts`
+   - Added CSRF endpoint tests
+   - Token consistency validation
+   - Session-based token management
+
+**Security Features:**
+
+1. **Token-Based Protection:**
+   - Cryptographically secure token generation
+   - Session-bound tokens (tied to user session)
+   - Tokens cannot be forged without session access
+   - Automatic token rotation on session change
+
+2. **Safe Method Exemption:**
+   - GET, HEAD, OPTIONS don't require CSRF token
+   - Follows HTTP semantics (safe methods don't modify state)
+   - Reduces unnecessary validation overhead
+
+3. **Header-Based Transmission:**
+   - Token sent in custom `X-CSRF-Token` header
+   - Cannot be sent by simple HTML forms
+   - Requires JavaScript (same-origin policy protection)
+   - Prevents basic CSRF attacks
+
+4. **Session Integration:**
+   - Secret stored securely in session
+   - Automatic cleanup on session expiration
+   - No database storage required
+   - Scales with session infrastructure
+
+**Files Created:**
+- `backend/src/auth/csrf.service.ts`
+- `backend/src/auth/csrf.service.spec.ts`
+- `backend/src/auth/guards/csrf.guard.ts`
+- `backend/test/csrf.e2e-spec.ts`
+- `frontend/src/app/core/services/csrf.service.ts`
+- `frontend/src/app/core/interceptors/csrf.interceptor.ts`
+- `PHASE_5_IMPLEMENTATION.md`
+
+**Files Modified:**
+- `backend/package.json` - Added csrf dependency
+- `backend/src/auth/auth.controller.ts` - Added CSRF endpoint
+- `backend/src/auth/auth.module.ts` - Added CsrfService provider
+- `backend/src/types/express.d.ts` - Added csrfSecret to session
+- `backend/test/auth.e2e-spec.ts` - Added CSRF endpoint tests
+- `frontend/src/app/core/core.module.ts` - Added CSRF providers
+
+**CSRF Protection Flow:**
+
+1. **Token Generation:**
+   - Client requests: `GET /auth/csrf`
+   - Backend checks session for csrfSecret
+   - If not exists, generates new secret and stores in session
+   - Backend generates token from secret
+   - Token returned to client
+   - Client stores token in CsrfService
+
+2. **Token Validation (when guard is applied):**
+   - Client makes state-changing request (POST/PUT/DELETE)
+   - CsrfInterceptor adds `X-CSRF-Token` header
+   - CsrfGuard intercepts request on backend
+   - Guard validates token against session secret
+   - Request proceeds if valid, 403 if invalid
+
+**API Examples:**
+```bash
+# Get CSRF token
+curl -X GET http://localhost:3000/auth/csrf -c cookies.txt
+# Response: {"csrfToken":"TOKEN_VALUE"}
+
+# Use token in request (when guard is applied)
+curl -X POST http://localhost:3000/auth/logout \
+  -H "X-CSRF-Token: TOKEN_VALUE" \
+  -b cookies.txt
+```
+
+**Important Notes:**
+
+1. **Guard Not Yet Applied:**
+   - CsrfGuard is implemented but NOT applied to routes
+   - This allows testing token flow before enforcement
+   - Will be applied to protected endpoints in future phase
+   - Intentional design for incremental implementation
+
+2. **Frontend Integration Ready:**
+   - CSRF service and interceptor fully implemented
+   - Automatic token addition to requests
+   - Ready for authentication flow integration
+
+3. **TypeScript Compatibility:**
+   - Fixed import statement to use default import
+   - `csrf` package includes built-in TypeScript definitions
+   - No separate `@types/csrf` package needed
+
+**Impact:**
+- Critical security layer added to protect against CSRF attacks
+- Token-based validation following industry standards
+- Automatic frontend integration with HTTP interceptor
+- Comprehensive test coverage (unit + E2E)
+- Type-safe implementation throughout
+- Foundation ready for applying guard to protected routes
+- Prepared for Phase 6: Frontend Authentication
+
+**Next Steps:**
+1. Run `npm install` in backend directory
+2. Run tests: `npm run test` and `npm run test:e2e`
+3. Test CSRF endpoint: `curl http://localhost:3000/auth/csrf`
+4. Ready for Phase 6: Frontend Authentication implementation
+
+---
+
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 ## [0.4.0] - 2026-05-24
 

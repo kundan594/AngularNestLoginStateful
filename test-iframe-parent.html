@@ -1,0 +1,183 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Parent Page - Iframe Test</title>
+    <style>
+        body {
+            font-family: Arial, sans-serif;
+            padding: 20px;
+            background: #f5f5f5;
+        }
+        .container {
+            max-width: 1200px;
+            margin: 0 auto;
+            background: white;
+            padding: 20px;
+            border-radius: 8px;
+            box-shadow: 0 2px 10px rgba(0,0,0,0.1);
+        }
+        h1 {
+            color: #333;
+            margin-bottom: 20px;
+        }
+        .controls {
+            margin-bottom: 20px;
+            padding: 15px;
+            background: #e3f2fd;
+            border-radius: 4px;
+        }
+        button {
+            padding: 10px 20px;
+            margin-right: 10px;
+            background: #2196F3;
+            color: white;
+            border: none;
+            border-radius: 4px;
+            cursor: pointer;
+            font-size: 14px;
+        }
+        button:hover {
+            background: #1976D2;
+        }
+        button.danger {
+            background: #f44336;
+        }
+        button.danger:hover {
+            background: #d32f2f;
+        }
+        #iframe-container {
+            border: 2px solid #ddd;
+            border-radius: 4px;
+            overflow: hidden;
+            margin-top: 20px;
+        }
+        iframe {
+            width: 100%;
+            height: 600px;
+            border: none;
+        }
+        .log {
+            margin-top: 20px;
+            padding: 15px;
+            background: #f5f5f5;
+            border-radius: 4px;
+            max-height: 200px;
+            overflow-y: auto;
+            font-family: 'Courier New', monospace;
+            font-size: 12px;
+        }
+        .log-entry {
+            padding: 5px;
+            margin-bottom: 5px;
+            border-left: 3px solid #2196F3;
+            padding-left: 10px;
+        }
+        .log-entry.received {
+            border-left-color: #4CAF50;
+        }
+        .log-entry.sent {
+            border-left-color: #FF9800;
+        }
+        .log-entry.error {
+            border-left-color: #f44336;
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <h1>🖼️ Parent Page - Iframe Session Test</h1>
+        
+        <div class="controls">
+            <h3>Parent Controls:</h3>
+            <button onclick="sendSessionCheck()">Check Session</button>
+            <button onclick="sendLogoutCommand()" class="danger">Send Logout Command</button>
+            <button onclick="clearLog()">Clear Log</button>
+            <button onclick="reloadIframe()">Reload Iframe</button>
+        </div>
+
+        <div id="iframe-container">
+            <iframe 
+                id="app-iframe" 
+                src="http://localhost:4200"
+                title="Angular App in Iframe">
+            </iframe>
+        </div>
+
+        <div class="log">
+            <h4>Message Log:</h4>
+            <div id="log-content"></div>
+        </div>
+    </div>
+
+    <script>
+        const iframe = document.getElementById('app-iframe');
+        const logContent = document.getElementById('log-content');
+
+        // Listen for messages from iframe
+        window.addEventListener('message', (event) => {
+            // Validate origin
+            if (event.origin !== 'http://localhost:4200') {
+                logMessage('Rejected message from unknown origin: ' + event.origin, 'error');
+                return;
+            }
+
+            logMessage('Received: ' + JSON.stringify(event.data), 'received');
+
+            // Handle different message types
+            if (event.data.type === 'session-valid') {
+                logMessage('✅ Session is valid', 'received');
+            } else if (event.data.type === 'session-invalid') {
+                logMessage('❌ Session is invalid', 'error');
+            } else if (event.data.type === 'logout') {
+                logMessage('🚪 User logged out from iframe', 'received');
+            } else if (event.data.type === 'session-extended') {
+                logMessage('⏰ Session extended in iframe', 'received');
+            }
+        });
+
+        function sendSessionCheck() {
+            const message = {
+                type: 'session-check',
+                timestamp: Date.now()
+            };
+            iframe.contentWindow.postMessage(message, 'http://localhost:4200');
+            logMessage('Sent: ' + JSON.stringify(message), 'sent');
+        }
+
+        function sendLogoutCommand() {
+            const message = {
+                type: 'logout',
+                timestamp: Date.now()
+            };
+            iframe.contentWindow.postMessage(message, 'http://localhost:4200');
+            logMessage('Sent: ' + JSON.stringify(message), 'sent');
+        }
+
+        function reloadIframe() {
+            iframe.src = iframe.src;
+            logMessage('🔄 Iframe reloaded', 'sent');
+        }
+
+        function clearLog() {
+            logContent.innerHTML = '';
+        }
+
+        function logMessage(message, type = 'info') {
+            const entry = document.createElement('div');
+            entry.className = 'log-entry ' + type;
+            entry.textContent = new Date().toLocaleTimeString() + ' - ' + message;
+            logContent.appendChild(entry);
+            logContent.scrollTop = logContent.scrollHeight;
+        }
+
+        // Log when iframe loads
+        iframe.addEventListener('load', () => {
+            logMessage('📱 Iframe loaded successfully', 'received');
+        });
+
+        logMessage('🚀 Parent page initialized', 'info');
+    </script>
+</body>
+</html>

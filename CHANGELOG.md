@@ -4,6 +4,271 @@ All notable changes to this project will be documented in this file.
 
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
 
+## [0.9.0] - 2026-05-25
+
+### Added
+
+#### Phase 9: Iframe Session Validation
+
+**Overview:**
+Implemented comprehensive iframe detection and session validation for applications embedded in iframes. The system detects iframe context, establishes secure PostMessage communication with parent windows, performs periodic session validation, and enforces security headers to prevent unauthorized embedding.
+
+**Frontend Services:**
+
+1. **Iframe Service:**
+   - `frontend/src/app/core/services/iframe.service.ts` (260 lines)
+   - Detects if application is running inside an iframe
+   - Manages PostMessage communication with parent window
+   - Validates message origins against whitelist
+   - Handles session check requests from parent
+   - Processes logout commands from parent
+   - Performs periodic session validation (60-second intervals)
+   - Notifies parent of session state changes
+   - Supports message types: session-check, session-valid, session-invalid, logout, session-extended
+
+2. **App Component Integration:**
+   - `frontend/src/app/app.component.ts`
+   - Detects iframe context on initialization
+   - Sets up PostMessage listener when in iframe
+   - Starts/stops iframe validation based on authentication state
+   - Properly cleans up iframe service on component destroy
+
+**Backend Implementation:**
+
+3. **Security Headers:**
+   - `backend/src/main.ts`
+   - Helmet middleware for comprehensive security headers
+   - Content Security Policy (CSP) configuration
+   - CSP frame-ancestors directive for iframe embedding control
+   - Custom X-Frame-Options middleware
+   - Allows embedding from whitelisted origins
+   - Denies embedding from unauthorized origins
+   - Supports localhost development origins
+
+**Testing Infrastructure:**
+
+4. **Test HTML File:**
+   - `test-iframe-parent.html` (185 lines)
+   - Complete parent page for iframe testing
+   - Interactive controls for session management
+   - PostMessage communication interface
+   - Real-time message log viewer
+   - Buttons: Check Session, Send Logout, Clear Log, Reload Iframe
+   - Visual feedback for all message types
+   - Origin validation demonstration
+
+**Key Features:**
+- ✅ Automatic iframe context detection
+- ✅ Secure PostMessage communication
+- ✅ Origin validation for all messages
+- ✅ Periodic session validation (60-second intervals)
+- ✅ Parent-child bidirectional messaging
+- ✅ Session state synchronization
+- ✅ Logout command support from parent
+- ✅ Security headers (Helmet, CSP, X-Frame-Options)
+- ✅ Whitelist-based embedding control
+- ✅ Graceful handling of invalid sessions
+- ✅ Automatic logout on session expiry
+- ✅ Parent notification of all session events
+
+**Configuration:**
+- Validation Interval: 60 seconds (1 minute)
+- Message Timeout: 5 seconds
+- Allowed Origins (Development):
+  - http://localhost:8080
+  - http://localhost:3000
+  - http://127.0.0.1:8080
+
+**Security Measures:**
+- Origin validation on all PostMessage communications
+- CSP frame-ancestors restricts embedding domains
+- X-Frame-Options prevents unauthorized framing
+- Helmet security headers for comprehensive protection
+- Session validation on every check
+- Automatic logout on invalid session
+- Message structure validation
+- Timeout handling for messages
+
+**Message Types:**
+1. `session-check` - Parent requests session status
+2. `session-valid` - Iframe confirms valid session
+3. `session-invalid` - Iframe reports invalid session
+4. `logout` - Parent requests logout
+5. `session-extended` - Iframe notifies session extension
+
+**Testing Scenarios:**
+1. Iframe detection and initialization
+2. PostMessage communication (parent → iframe)
+3. Session check request/response
+4. Logout command from parent
+5. Periodic session validation
+6. Invalid session handling
+7. Origin validation (authorized/unauthorized)
+8. Security header enforcement
+9. Session warning in iframe context
+10. Iframe reload with session persistence
+
+**Browser Compatibility:**
+- PostMessage API: All modern browsers
+- CSP frame-ancestors: Chrome 40+, Firefox 58+, Safari 10+
+- X-Frame-Options: All browsers
+- Fallback: Graceful degradation for older browsers
+
+**Performance Considerations:**
+- Minimal overhead for non-iframe contexts
+- Efficient origin validation
+- Throttled validation requests (60-second intervals)
+- Proper cleanup of event listeners
+- No memory leaks
+
+**Integration Points:**
+- Works seamlessly with Phase 8 (Session Keepalive)
+- Integrates with Phase 7 (Cross-Tab Synchronization)
+- Uses existing AuthService and SessionService
+- Compatible with all authentication flows
+
+## [0.8.0] - 2026-05-25
+
+### Added
+
+#### Phase 8: Session Keepalive & Warning System
+
+**Overview:**
+Implemented comprehensive session keepalive functionality with automatic activity detection and user-friendly session expiration warnings. The system keeps users logged in while actively using the application and provides clear warnings before session expiration with countdown timers and manual extension options.
+
+**Frontend Services:**
+
+1. **Keepalive Service:**
+   - `frontend/src/app/core/services/keepalive.service.ts`
+   - Monitors 6 types of user activity: mousemove, click, keypress, touchstart, scroll, focus
+   - Debounces activity detection (2 seconds) to prevent excessive processing
+   - Throttles keepalive requests (1 per minute) to reduce network traffic
+   - Automatically sends keepalive requests to backend on user activity
+   - Integrates with SessionService to update local session state
+   - Lifecycle management: starts on authentication, stops on logout
+
+2. **Session Service Enhancements:**
+   - `frontend/src/app/core/services/session.service.ts`
+   - Already includes `extendSession()` method for manual session extension
+   - Session warning timer triggers dialog 90 seconds before expiry (testing mode)
+   - Broadcasts session extension events to synchronize across tabs
+   - Auto-logout functionality when session expires
+
+**Frontend Components:**
+
+3. **Session Warning Dialog Component:**
+   - `frontend/src/app/shared/components/session-warning-dialog/session-warning-dialog.component.ts`
+   - Real-time countdown timer displaying remaining session time (MM:SS format)
+   - Updates every second using RxJS interval
+   - Two action buttons: "Stay Logged In" and "Logout Now"
+   - Keyboard shortcuts: Enter (extend session), Escape (logout)
+   - Auto-logout when countdown reaches 0:00
+   - Calls AuthService.logout() for consistent logout flow
+   
+4. **Session Warning Dialog Template:**
+   - `frontend/src/app/shared/components/session-warning-dialog/session-warning-dialog.component.html`
+   - User-friendly warning message with clear call-to-action
+   - Large countdown display with visual emphasis
+   - Accessible button layout with keyboard hint footer
+   
+5. **Session Warning Dialog Styles:**
+   - `frontend/src/app/shared/components/session-warning-dialog/session-warning-dialog.component.scss`
+   - Full-screen overlay with semi-transparent backdrop
+   - Centered modal dialog with smooth animations (fadeIn, slideIn)
+   - Responsive design for mobile and desktop
+   - Color-coded warning states (orange for warning, red for countdown)
+   - Accessible focus states and hover effects
+
+**Module Integration:**
+
+6. **Shared Module:**
+   - `frontend/src/app/shared/shared.module.ts`
+   - Declares and exports SessionWarningDialogComponent
+   - Makes component available throughout the application
+
+7. **App Module:**
+   - `frontend/src/app/app.module.ts`
+   - Imports SharedModule to enable session warning dialog
+
+8. **App Component:**
+   - `frontend/src/app/app.component.ts`
+   - Injects KeepaliveService and SessionService
+   - Subscribes to authentication state to start/stop keepalive monitoring
+   - Exposes sessionWarning$ observable for template binding
+   - Properly cleans up keepalive service on component destroy
+   
+9. **App Component Template:**
+   - `frontend/src/app/app.component.html`
+   - Conditionally renders session warning dialog based on sessionWarning$ observable
+
+**Backend Implementation:**
+
+10. **Keepalive Endpoint:**
+    - `backend/src/auth/auth.controller.ts`
+    - POST `/auth/keepalive` endpoint (lines 128-154)
+    - Requires authentication via AuthenticatedGuard
+    - Updates session lastActivity timestamp
+    - Returns new expiry time to frontend
+    - Session TTL automatically extended by rolling session configuration
+    - Testing mode: 2-minute session duration
+
+**Key Features:**
+- ✅ Automatic activity detection with 6 event types
+- ✅ Debounced and throttled keepalive requests for performance
+- ✅ User-friendly warning dialog with countdown timer
+- ✅ Manual session extension via button or keyboard shortcut
+- ✅ Auto-logout when session expires
+- ✅ Cross-tab synchronization via BroadcastService
+- ✅ Responsive design for all screen sizes
+- ✅ Accessible keyboard navigation
+- ✅ Smooth animations and transitions
+- ✅ CSRF protection on keepalive requests
+- ✅ Secure authentication validation
+
+**Configuration:**
+- Session Duration: 2 minutes (testing mode)
+- Warning Threshold: 90 seconds before expiry (testing mode)
+- Debounce Time: 2 seconds
+- Throttle Time: 60 seconds (1 minute)
+
+**Production Settings (to be applied):**
+- Session Duration: 30 minutes
+- Warning Threshold: 5 minutes before expiry
+- Backend keepalive expiry: 30 minutes
+
+**Testing Scenarios:**
+1. Session warning appears at correct time
+2. Countdown timer updates every second
+3. "Stay Logged In" extends session
+4. "Logout Now" triggers immediate logout
+5. Auto-logout at 0:00
+6. Activity detection triggers keepalive
+7. Keyboard shortcuts work (Enter/Escape)
+8. Cross-tab synchronization of warnings and extensions
+9. Responsive design on mobile and desktop
+10. Multiple keepalive requests throttled correctly
+
+**Security Considerations:**
+- Authentication required for keepalive endpoint
+- CSRF token validation on all requests
+- Rate limiting via throttling (max 1 request/minute)
+- Session validation on every keepalive
+- Expired sessions cannot be extended
+
+**Performance Optimizations:**
+- Debouncing prevents excessive event processing
+- Throttling reduces network traffic and backend load
+- Passive event listeners where possible
+- Proper cleanup of timers and subscriptions
+- Single interval timer for countdown updates
+
+**Browser Compatibility:**
+- Chrome 54+ (BroadcastChannel API)
+- Firefox 38+ (BroadcastChannel API)
+- Edge 79+ (BroadcastChannel API)
+- Safari 15.4+ (BroadcastChannel API)
+- Fallback to localStorage for older browsers
+
 ## [0.7.0] - 2026-05-25
 
 ### Added

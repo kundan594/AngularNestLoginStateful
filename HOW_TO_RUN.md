@@ -106,6 +106,20 @@ npm run start:dev
   curl -X POST http://localhost:3000/auth/login \
   -H "Content-Type: application/json" \
   -d '{"email":"admin@example.com","password":"Admin123!"}'
+
+
+  
+# Test login
+curl -X POST http://localhost:3000/auth/login \
+  -H "Content-Type: application/json" \
+  -d '{"email":"admin@example.com","password":"Admin123!"}' \
+  -c cookies.txt
+
+# Check session
+curl -X GET http://localhost:3000/auth/session -b cookies.txt
+
+# Logout
+curl -X POST http://localhost:3000/auth/logout -b cookies.txt
 ```
 
 **Expected Output:**

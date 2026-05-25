@@ -211,6 +211,38 @@ describe('AuthController (e2e)', () => {
     it('should fail when not authenticated', async () => {
       await request(app.getHttpServer()).post('/auth/logout').expect(403);
     });
+  describe('/auth/csrf (GET)', () => {
+    it('should return a CSRF token', async () => {
+      const response = await request(app.getHttpServer())
+        .get('/auth/csrf')
+        .expect(200);
+
+      expect(response.body).toHaveProperty('csrfToken');
+      expect(typeof response.body.csrfToken).toBe('string');
+      expect(response.body.csrfToken.length).toBeGreaterThan(0);
+    });
+
+    it('should return the same token for the same session', async () => {
+      const agent = request.agent(app.getHttpServer());
+
+      const response1 = await agent.get('/auth/csrf').expect(200);
+      const response2 = await agent.get('/auth/csrf').expect(200);
+
+      expect(response1.body.csrfToken).toBe(response2.body.csrfToken);
+    });
+
+    it('should return different tokens for different sessions', async () => {
+      const response1 = await request(app.getHttpServer())
+        .get('/auth/csrf')
+        .expect(200);
+
+      const response2 = await request(app.getHttpServer())
+        .get('/auth/csrf')
+        .expect(200);
+
+      expect(response1.body.csrfToken).not.toBe(response2.body.csrfToken);
+    });
+  });
   });
 });
 

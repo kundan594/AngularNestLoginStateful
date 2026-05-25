@@ -13,17 +13,43 @@ import { LoginDto } from './dto/login.dto';
 import { LocalAuthGuard } from './guards/local-auth.guard';
 import { AuthenticatedGuard } from './guards/authenticated.guard';
 import { User } from '../users/entities/user.entity';
+import { CsrfService } from './csrf.service';
 
 /**
  * Authentication Controller
- * 
+ *
  * Handles authentication endpoints:
  * - POST /auth/login - User login
  * - POST /auth/logout - User logout
  * - GET /auth/session - Check session status
+ * - GET /auth/csrf - Get CSRF token
  */
 @Controller('auth')
 export class AuthController {
+  constructor(private readonly csrfService: CsrfService) {}
+
+  /**
+   * Get CSRF token
+   * Generates or retrieves CSRF token for the session
+   *
+   * @param req - Express request
+   * @returns CSRF token
+   */
+  @Get('csrf')
+  async getCsrfToken(@Req() req: Request) {
+    // Generate CSRF secret if not exists
+    if (!req.session.csrfSecret) {
+      req.session.csrfSecret = this.csrfService.generateSecret();
+    }
+
+    // Generate token from secret
+    const token = this.csrfService.generateToken(req.session.csrfSecret);
+
+    return {
+      csrfToken: token,
+    };
+  }
+
   /**
    * Login endpoint
    * Validates credentials and creates session

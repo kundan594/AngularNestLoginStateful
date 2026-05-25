@@ -4,16 +4,18 @@ import { AuthService } from './auth.service';
 import { AuthController } from './auth.controller';
 import { LocalStrategy } from './strategies/local.strategy';
 import { SessionSerializer } from './session.serializer';
+import { CsrfService } from './csrf.service';
 import { UsersModule } from '../users/users.module';
 
 /**
  * Authentication Module
- * 
+ *
  * Provides authentication functionality including:
  * - Passport local strategy
  * - Session management
  * - Login/logout endpoints
  * - Authentication guards
+ * - CSRF protection
  */
 @Module({
   imports: [
@@ -24,9 +26,10 @@ import { UsersModule } from '../users/users.module';
     AuthService,
     LocalStrategy,
     SessionSerializer,
+    CsrfService,
   ],
   controllers: [AuthController],
-  exports: [AuthService],
+  exports: [AuthService, CsrfService],
 })
 export class AuthModule {}
 

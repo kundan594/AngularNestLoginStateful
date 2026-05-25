@@ -4,10 +4,8 @@ import { User } from './user.model';
  * Authentication response from login endpoint
  */
 export interface AuthResponse {
-  success: boolean;
   message: string;
-  user?: User;
-  csrfToken?: string;
+  user: User;
 }
 
 /**

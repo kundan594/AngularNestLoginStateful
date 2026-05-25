@@ -2,11 +2,15 @@ import { NgModule, Optional, SkipSelf } from '@angular/core';
 import { CommonModule } from '@angular/common';
 import { HTTP_INTERCEPTORS } from '@angular/common/http';
 import { CsrfInterceptor } from './interceptors/csrf.interceptor';
+import { AuthInterceptor } from './interceptors/auth.interceptor';
+import { ErrorInterceptor } from './interceptors/error.interceptor';
 import { CsrfService } from './services/csrf.service';
+import { AuthService } from './services/auth.service';
+import { SessionService } from './services/session.service';
 
 /**
  * CoreModule contains singleton services and should only be imported once in AppModule.
- * Services for authentication, session management, and HTTP interceptors will be added here.
+ * Provides authentication, session management, and HTTP interceptors.
  */
 @NgModule({
   declarations: [],
@@ -15,11 +19,23 @@ import { CsrfService } from './services/csrf.service';
   ],
   providers: [
     // Singleton services
+    AuthService,
+    SessionService,
     CsrfService,
-    // HTTP Interceptors
+    // HTTP Interceptors (order matters!)
+    {
+      provide: HTTP_INTERCEPTORS,
+      useClass: AuthInterceptor,
+      multi: true,
+    },
     {
       provide: HTTP_INTERCEPTORS,
       useClass: CsrfInterceptor,
+      multi: true,
+    },
+    {
+      provide: HTTP_INTERCEPTORS,
+      useClass: ErrorInterceptor,
       multi: true,
     },
   ]

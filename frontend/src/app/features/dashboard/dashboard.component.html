@@ -1,6 +1,49 @@
 <div class="dashboard-container">
-  <h1>Dashboard</h1>
-  <p>Welcome to your dashboard!</p>
+  <div class="dashboard-header">
+    <h1>Dashboard</h1>
+    <button class="btn-logout" (click)="logout()" [disabled]="loggingOut">
+      <span *ngIf="!loggingOut">Logout</span>
+      <span *ngIf="loggingOut">Logging out...</span>
+    </button>
+  </div>
+
+  <div class="user-info" *ngIf="currentUser$ | async as user">
+    <div class="user-card">
+      <h2>Welcome, {{ user.firstName }} {{ user.lastName }}!</h2>
+      <div class="user-details">
+        <p><strong>Email:</strong> {{ user.email }}</p>
+        <p><strong>User ID:</strong> {{ user.id }}</p>
+        <p><strong>Status:</strong> <span class="status-badge" [class.active]="user.isActive">{{ user.isActive ? 'Active' : 'Inactive' }}</span></p>
+      </div>
+    </div>
+  </div>
+
+  <div class="dashboard-content">
+    <div class="info-card">
+      <h3>🎉 Authentication Successful!</h3>
+      <p>You have successfully logged in to the application.</p>
+      <p>This dashboard is protected by the AuthGuard and requires authentication to access.</p>
+    </div>
+
+    <div class="features-grid">
+      <div class="feature-card">
+        <h4>🔒 Session-Based Auth</h4>
+        <p>Using secure session cookies with HTTP-only flag</p>
+      </div>
+      <div class="feature-card">
+        <h4>🛡️ CSRF Protection</h4>
+        <p>Protected against cross-site request forgery attacks</p>
+      </div>
+      <div class="feature-card">
+        <h4>🔐 Password Security</h4>
+        <p>Passwords hashed with bcrypt</p>
+      </div>
+      <div class="feature-card">
+        <h4>⚡ Redis Sessions</h4>
+        <p>Fast session storage with Redis</p>
+      </div>
+    </div>
+  </div>
 </div>
 
 <!-- Made with Bob -->

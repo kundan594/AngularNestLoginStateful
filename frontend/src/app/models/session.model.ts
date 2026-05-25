@@ -2,10 +2,10 @@
  * Session model representing session state and metadata
  */
 export interface Session {
-  isAuthenticated: boolean;
+  userId: string;
+  createdAt: Date;
   expiresAt: Date;
   lastActivity: Date;
-  csrfToken?: string;
 }
 
 /**

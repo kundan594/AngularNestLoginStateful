@@ -31,7 +31,7 @@ export default () => ({
       httpOnly: true, // Prevent XSS attacks
       secure: process.env.NODE_ENV === 'production', // HTTPS only in production
       sameSite: 'strict' as const, // CSRF protection
-      maxAge: 30 * 60 * 1000, // 30 minutes
+      maxAge: 2 * 60 * 1000, // 2 minutes (TESTING - change back to 30 minutes for production)
       domain: process.env.COOKIE_DOMAIN || undefined,
       path: '/',
     },

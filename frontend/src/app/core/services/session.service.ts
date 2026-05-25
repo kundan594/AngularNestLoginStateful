@@ -24,8 +24,9 @@ export class SessionService implements OnDestroy {
   public sessionWarning$ = this.sessionWarningSubject.asObservable();
 
   // Session configuration (in milliseconds)
-  private readonly SESSION_DURATION = 30 * 60 * 1000; // 30 minutes
-  private readonly WARNING_THRESHOLD = 5 * 60 * 1000; // 5 minutes before expiry
+  // TODO: Change back to production values after popup verification
+  private readonly SESSION_DURATION = 2 * 60 * 1000; // 2 minutes (TESTING)
+  private readonly WARNING_THRESHOLD = 90 * 1000; // 90 seconds before expiry (TESTING)
 
   constructor(
     private broadcastService: BroadcastService,
@@ -52,12 +53,20 @@ export class SessionService implements OnDestroy {
 
   /**
    * Start a new session
-   * 
+   *
    * @param userId - User ID for the session
    */
   startSession(userId: string): void {
     const now = new Date();
     const expiresAt = new Date(now.getTime() + this.SESSION_DURATION);
+
+    console.log('[SessionService] Starting session:', {
+      userId,
+      sessionDuration: this.SESSION_DURATION / 1000 + ' seconds',
+      warningThreshold: this.WARNING_THRESHOLD / 1000 + ' seconds',
+      expiresAt: expiresAt.toLocaleTimeString(),
+      warningAt: new Date(expiresAt.getTime() - this.WARNING_THRESHOLD).toLocaleTimeString()
+    });
 
     this.applySessionState(userId, now, expiresAt);
     this.broadcastService.broadcast('login', {
@@ -84,6 +93,16 @@ export class SessionService implements OnDestroy {
       userId: currentSession.userId,
       expiresAt: expiresAt.getTime(),
     });
+  }
+
+  /**
+   * Extend session (keepalive)
+   * Sends keepalive request to backend and updates local session
+   */
+  extendSession(): void {
+    // This will be implemented with the keepalive service
+    // For now, just update activity which extends the session
+    this.updateActivity();
   }
 
   /**
@@ -180,19 +199,47 @@ export class SessionService implements OnDestroy {
     // Set warning timer
     if (warningTime > now) {
       const warningDelay = warningTime - now;
+      console.log('[SessionService] Setting warning timer:', {
+        warningDelay: warningDelay / 1000 + ' seconds',
+        willShowAt: new Date(now + warningDelay).toLocaleTimeString()
+      });
       this.warningTimer = setTimeout(() => {
+        console.log('[SessionService] ⚠️ SHOWING WARNING DIALOG');
         this.sessionWarningSubject.next(true);
         this.broadcastService.broadcast('warning', {
           userId: this.sessionSubject.value?.userId,
           expiresAt: expiresAt.getTime(),
         });
       }, warningDelay);
+    } else {
+      console.log('[SessionService] Warning time already passed, showing immediately');
+      this.sessionWarningSubject.next(true);
+      this.broadcastService.broadcast('warning', {
+        userId: this.sessionSubject.value?.userId,
+        expiresAt: expiresAt.getTime(),
+      });
     }
 
     // Set expiry timer
     const expiryDelay = expiresAt.getTime() - now;
+    console.log('[SessionService] Setting expiry timer:', {
+      expiryDelay: expiryDelay / 1000 + ' seconds',
+      willExpireAt: new Date(now + expiryDelay).toLocaleTimeString()
+    });
     this.sessionExpiryTimer = setTimeout(() => {
-      this.clearLocalSession();
+      console.log('[SessionService] 🚪 SESSION EXPIRED - Auto logout');
+      this.endSession();
+      // Trigger logout through auth service
+      this.authService.logout().subscribe({
+        next: () => {
+          console.log('[SessionService] Logout successful');
+        },
+        error: (err) => {
+          console.error('[SessionService] Logout error:', err);
+          // Clear local state even if logout fails
+          this.clearLocalSession();
+        }
+      });
     }, expiryDelay);
   }
 

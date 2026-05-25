@@ -1,8 +1,10 @@
 import { Component, OnInit, OnDestroy } from '@angular/core';
 import { Router, NavigationEnd } from '@angular/router';
-import { Subscription, filter } from 'rxjs';
+import { Observable, Subscription, filter } from 'rxjs';
 import { AuthService } from './core/services/auth.service';
 import { BroadcastService } from './core/services/broadcast.service';
+import { SessionService } from './core/services/session.service';
+import { KeepaliveService } from './core/services/keepalive.service';
 
 @Component({
   selector: 'app-root',
@@ -11,6 +13,8 @@ import { BroadcastService } from './core/services/broadcast.service';
 })
 export class AppComponent implements OnInit, OnDestroy {
   title = 'Authentication System';
+  showSessionWarning$: Observable<boolean>;
+  
   private broadcastSubscription?: Subscription;
   private authSubscription?: Subscription;
   private currentRoute = '';
@@ -18,6 +22,8 @@ export class AppComponent implements OnInit, OnDestroy {
   constructor(
     private authService: AuthService,
     private broadcastService: BroadcastService,
+    private sessionService: SessionService,
+    private keepaliveService: KeepaliveService,
     private router: Router
   ) {
     // Track current route
@@ -26,9 +32,21 @@ export class AppComponent implements OnInit, OnDestroy {
     ).subscribe((event: any) => {
       this.currentRoute = event.url;
     });
+
+    // Subscribe to session warning observable
+    this.showSessionWarning$ = this.sessionService.sessionWarning$;
   }
 
   ngOnInit(): void {
+    // Start keepalive monitoring when user is authenticated
+    this.authService.isAuthenticated$.subscribe((isAuthenticated) => {
+      if (isAuthenticated) {
+        this.keepaliveService.start();
+      } else {
+        this.keepaliveService.stop();
+      }
+    });
+
     // Listen for cross-tab logout events
     this.broadcastSubscription = this.broadcastService.messages$.subscribe((message) => {
       if (message.type === 'logout') {
@@ -53,6 +71,7 @@ export class AppComponent implements OnInit, OnDestroy {
   ngOnDestroy(): void {
     this.broadcastSubscription?.unsubscribe();
     this.authSubscription?.unsubscribe();
+    this.keepaliveService.stop();
   }
 }
 

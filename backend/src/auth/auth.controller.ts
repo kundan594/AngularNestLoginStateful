@@ -124,6 +124,34 @@ export class AuthController {
       user: req.isAuthenticated() ? req.user : null,
     };
   }
+
+  /**
+   * Keepalive endpoint
+   * Extends the session by updating the last activity timestamp
+   * Requires authentication
+   *
+   * @param req - Express request
+   * @returns Success message with updated expiry time
+   */
+  @UseGuards(AuthenticatedGuard)
+  @Post('keepalive')
+  @HttpCode(HttpStatus.OK)
+  async keepalive(@Req() req: Request) {
+    // Session is automatically extended by the rolling session configuration
+    // Just need to update the lastActivity timestamp in session data
+    if (req.session) {
+      req.session.lastActivity = Date.now();
+    }
+
+    // Calculate new expiry time (2 minutes from now for TESTING)
+    // TODO: Change back to 30 minutes for production
+    const expiresAt = Date.now() + (2 * 60 * 1000);
+
+    return {
+      message: 'Session extended',
+      expiresAt,
+    };
+  }
 }
 
 // Made with Bob

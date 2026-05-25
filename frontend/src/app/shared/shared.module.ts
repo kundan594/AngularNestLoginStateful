@@ -1,5 +1,6 @@
 import { NgModule } from '@angular/core';
 import { CommonModule } from '@angular/common';
+import { SessionWarningDialogComponent } from './components/session-warning-dialog/session-warning-dialog.component';
 
 /**
  * SharedModule contains reusable components, directives, and pipes
@@ -7,8 +8,8 @@ import { CommonModule } from '@angular/common';
  */
 @NgModule({
   declarations: [
-    // Shared components will be declared here:
-    // - SessionWarningDialogComponent
+    SessionWarningDialogComponent,
+    // Additional shared components will be declared here:
     // - LoadingSpinnerComponent
     // Shared directives will be declared here
   ],
@@ -17,6 +18,7 @@ import { CommonModule } from '@angular/common';
     // Angular Material modules will be imported here
   ],
   exports: [
+    SessionWarningDialogComponent,
     // Export shared components, directives, and pipes
     // Export commonly used Angular Material modules
   ]

@@ -1,10 +1,14 @@
 import { Module } from '@nestjs/common';
 import { ConfigModule, ConfigService } from '@nestjs/config';
 import { TypeOrmModule } from '@nestjs/typeorm';
+import { ThrottlerModule, ThrottlerGuard } from '@nestjs/throttler';
+import { APP_GUARD, APP_INTERCEPTOR } from '@nestjs/core';
 import configuration from './config/configuration';
 import { getDatabaseConfig } from './config/database.config';
+import { getThrottlerConfig } from './config/throttler.config';
 import { UsersModule } from './users/users.module';
 import { AuthModule } from './auth/auth.module';
+import { SecurityLoggingInterceptor } from './common/interceptors/security-logging.interceptor';
 
 /**
  * Root Application Module
@@ -43,15 +47,26 @@ import { AuthModule } from './auth/auth.module';
       inject: [ConfigService],
     }),
 
+    // Throttler Module for Rate Limiting
+    ThrottlerModule.forRoot(getThrottlerConfig()),
+
     // Feature Modules
     UsersModule,
     AuthModule,
-    
-    // TODO: Add modules as they are implemented
-    // SessionModule,
   ],
   controllers: [],
-  providers: [],
+  providers: [
+    // Global Throttler Guard
+    {
+      provide: APP_GUARD,
+      useClass: ThrottlerGuard,
+    },
+    // Global Security Logging Interceptor
+    {
+      provide: APP_INTERCEPTOR,
+      useClass: SecurityLoggingInterceptor,
+    },
+  ],
 })
 export class AppModule {}
 

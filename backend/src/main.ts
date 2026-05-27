@@ -5,6 +5,7 @@ import passport from 'passport';
 import session from 'express-session';
 import { ConfigService } from '@nestjs/config';
 import helmet from 'helmet';
+import { Request, Response, NextFunction } from 'express';
 
 /**
  * Bootstrap the NestJS application
@@ -47,7 +48,7 @@ async function bootstrap() {
 
   // Custom X-Frame-Options middleware for more control
   // Allows embedding from specific origins
-  app.use((req, res, next) => {
+  app.use((req: Request, res: Response, next: NextFunction) => {
     const allowedOrigins = [
       'http://localhost:8080',
       'http://localhost:3000',
@@ -98,6 +99,11 @@ async function bootstrap() {
       transform: true, // Automatically transform payloads to DTO instances
       transformOptions: {
         enableImplicitConversion: true, // Convert primitive types automatically
+      },
+      disableErrorMessages: process.env.NODE_ENV === 'production', // Hide details in prod
+      validationError: {
+        target: false, // Don't expose target object
+        value: false, // Don't expose submitted values
       },
     }),
   );

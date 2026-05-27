@@ -4,6 +4,207 @@ All notable changes to this project will be documented in this file.
 
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
 
+## [0.10.0] - 2026-05-26
+
+### Added
+
+#### Phase 10: Security Hardening
+
+**Overview:**
+Implemented comprehensive security hardening measures including enhanced HTTP security headers, rate limiting, input validation and sanitization, structured logging infrastructure, and security event monitoring. The system now provides enterprise-grade protection against common web vulnerabilities.
+
+**Security Dependencies:**
+
+1. **Packages Installed:**
+   - `@nestjs/throttler` - Rate limiting middleware
+   - `helmet` - Security headers middleware
+   - `nest-winston` - Winston logger integration for NestJS
+   - `winston` - Structured logging framework
+   - `winston-daily-rotate-file` - Log rotation with retention policies
+   - `sanitize-html` - HTML sanitization for XSS prevention
+   - `@types/helmet` - TypeScript type definitions
+   - `@types/sanitize-html` - TypeScript type definitions
+
+**Configuration Files:**
+
+2. **Security Configuration:**
+   - `backend/src/config/security.config.ts` (37 lines)
+   - Environment-specific Helmet configuration
+   - Content Security Policy (CSP) directives
+   - HSTS settings (31536000 seconds in production)
+   - Frame-ancestors configuration for iframe support
+   - Separate configs for development and production
+
+3. **Logger Configuration:**
+   - `backend/src/config/logger.config.ts` (79 lines)
+   - Winston logger with multiple transports
+   - Console output with colors (development)
+   - Daily rotating file logs (production)
+   - Separate log files: error, combined, security
+   - Log retention: 30 days (general), 90 days (security)
+   - Exception and rejection handlers
+   - JSON structured logging
+
+4. **Throttler Configuration:**
+   - `backend/src/config/throttler.config.ts` (27 lines)
+   - Three-tier rate limiting system
+   - Short: 10 requests per second
+   - Medium: 100 requests per minute
+   - Long: 1000 requests per 15 minutes
+   - Configurable per endpoint
+
+**Security Features:**
+
+5. **Enhanced Security Headers (Helmet):**
+   - Content Security Policy (CSP)
+   - HTTP Strict Transport Security (HSTS)
+   - X-Frame-Options with iframe support
+   - X-Content-Type-Options (noSniff)
+   - X-XSS-Protection
+   - Referrer-Policy (strict-origin-when-cross-origin)
+   - X-Permitted-Cross-Domain-Policies
+   - X-DNS-Prefetch-Control
+   - Hide X-Powered-By header
+
+6. **Rate Limiting Implementation:**
+   - Global rate limiting via ThrottlerGuard
+   - Endpoint-specific limits:
+     - Login: 3 attempts per minute (strict)
+     - Status: 60 requests per minute (moderate)
+     - CSRF: No throttling (skipped)
+   - Prevents brute force attacks
+   - Configurable per route
+
+7. **Input Validation & Sanitization:**
+   - Enhanced `LoginDto` validation:
+     - Email format validation
+     - Email transformation (lowercase, trim)
+     - Password length: 8-128 characters
+     - Enhanced error messages
+   - Enhanced `CreateUserDto` validation:
+     - Email max length: 255 characters
+     - Strong password requirements (uppercase, lowercase, number, special char)
+     - Name validation with character restrictions
+     - Input transformation and sanitization
+   - Global ValidationPipe configuration:
+     - Whitelist mode (strip unknown properties)
+     - Forbid non-whitelisted properties
+     - Auto-transform payloads
+     - Hide validation details in production
+
+8. **Sanitization Pipe:**
+   - `backend/src/common/pipes/sanitize.pipe.ts` (44 lines)
+   - Sanitizes HTML from string inputs
+   - Recursively sanitizes object properties
+   - Prevents XSS attacks
+   - No HTML tags allowed
+   - Configurable sanitization rules
+
+9. **Security Logging Interceptor:**
+   - `backend/src/common/interceptors/security-logging.interceptor.ts` (71 lines)
+   - Logs all security-relevant requests
+   - Tracks authentication attempts
+   - Records user actions with context
+   - Captures failures with error details
+   - Monitors endpoints: /auth/login, /auth/logout, /auth/csrf, /users
+   - Includes IP, user agent, and user ID
+
+**Testing:**
+
+10. **Security Test Suite:**
+    - `backend/test/security.e2e-spec.ts` (145 lines)
+    - Rate limiting enforcement tests
+    - Input validation tests (email, SQL injection, XSS)
+    - Password length validation tests
+    - Security headers presence tests
+    - CSP headers verification
+    - CSRF token generation tests
+
+**Application Updates:**
+
+11. **Main Application:**
+    - `backend/src/main.ts` - Enhanced validation pipe
+    - Production-safe error messages
+    - Validation error sanitization
+
+12. **App Module:**
+    - `backend/src/app.module.ts` - Security modules integration
+    - Winston logger module
+    - Throttler module with global guard
+    - Security logging interceptor
+    - Proper provider configuration
+
+13. **Auth Controller:**
+    - `backend/src/auth/auth.controller.ts` - Rate limiting decorators
+    - Throttle decorators on endpoints
+    - Skip throttling for CSRF endpoint
+    - Strict limits on login endpoint
+
+**Key Features:**
+- ✅ Enhanced HTTP security headers (Helmet)
+- ✅ Rate limiting to prevent brute force attacks
+- ✅ Comprehensive input validation
+- ✅ Input sanitization to prevent XSS
+- ✅ Structured logging with Winston
+- ✅ Security event monitoring
+- ✅ Daily log rotation with retention policies
+- ✅ Production-safe error messages
+- ✅ SQL injection prevention (TypeORM + validation)
+- ✅ CSRF protection (existing + enhanced)
+- ✅ Session security (existing + enhanced)
+
+**Security Protections:**
+1. **SQL Injection:** TypeORM parameterized queries + input validation
+2. **XSS:** Angular sanitization + CSP headers + input sanitization pipe
+3. **CSRF:** Tokens + SameSite cookies + origin validation
+4. **Brute Force:** Rate limiting (3 login attempts/minute)
+5. **Session Hijacking:** Secure cookies + server-side storage + expiration
+
+**Configuration:**
+- Rate Limits:
+  - Login: 3 attempts per minute
+  - Status: 60 requests per minute
+  - Global: 10/sec, 100/min, 1000/15min
+- Log Retention:
+  - Error logs: 30 days
+  - Combined logs: 30 days
+  - Security logs: 90 days
+- Validation:
+  - Email: Max 255 characters
+  - Password: 8-128 characters, strong requirements
+  - Names: 1-100 characters, letters only
+
+**Performance Considerations:**
+- Minimal overhead for validation
+- Efficient rate limiting
+- Structured logging with rotation
+- No memory leaks
+- Proper cleanup of resources
+
+**Integration Points:**
+- Works with all existing authentication flows
+- Compatible with Phase 9 (Iframe Session Validation)
+- Integrates with Phase 8 (Session Keepalive)
+- Uses existing session management
+- Enhances existing CSRF protection
+
+**Production Deployment:**
+- Set NODE_ENV=production
+- Configure production environment variables
+- Enable HTTPS
+- Update CORS allowed origins
+- Update CSP frame-ancestors for production domains
+- Set strong SESSION_SECRET
+- Review and update rate limits
+- Configure log retention policies
+- Run npm audit and fix vulnerabilities
+
+**Documentation:**
+- `PHASE_10_IMPLEMENTATION.md` - Implementation guide
+- `PHASE_10_COMPLETED.md` - Completion summary
+- Security test suite with comprehensive coverage
+- Production deployment checklist
+
 ## [0.9.0] - 2026-05-25
 
 ### Added

@@ -9,6 +9,7 @@ import {
   HttpStatus,
 } from '@nestjs/common';
 import { Request } from 'express';
+import { Throttle, SkipThrottle } from '@nestjs/throttler';
 import { LoginDto } from './dto/login.dto';
 import { LocalAuthGuard } from './guards/local-auth.guard';
 import { AuthenticatedGuard } from './guards/authenticated.guard';
@@ -35,6 +36,7 @@ export class AuthController {
    * @param req - Express request
    * @returns CSRF token
    */
+  @SkipThrottle()
   @Get('csrf')
   async getCsrfToken(@Req() req: Request) {
     // Generate CSRF secret if not exists
@@ -53,11 +55,13 @@ export class AuthController {
   /**
    * Login endpoint
    * Validates credentials and creates session
-   * 
+   * Strict rate limiting: 3 attempts per minute
+   *
    * @param loginDto - Login credentials
    * @param req - Express request with user
    * @returns User object and success message
    */
+  @Throttle({ short: { limit: 3, ttl: 60000 } })
   @UseGuards(LocalAuthGuard)
   @Post('login')
   @HttpCode(HttpStatus.OK)
@@ -113,10 +117,12 @@ export class AuthController {
   /**
    * Public endpoint to check if user is authenticated
    * Does not require authentication
-   * 
+   * Moderate rate limiting: 60 per minute
+   *
    * @param req - Express request
    * @returns Authentication status
    */
+  @Throttle({ medium: { limit: 60, ttl: 60000 } })
   @Get('status')
   async getStatus(@Req() req: Request) {
     return {

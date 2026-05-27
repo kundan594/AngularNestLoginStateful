@@ -6,6 +6,7 @@ import session from 'express-session';
 import { ConfigService } from '@nestjs/config';
 import helmet from 'helmet';
 import { Request, Response, NextFunction } from 'express';
+import { getCorsConfig } from './config/cors.config';
 
 /**
  * Bootstrap the NestJS application
@@ -80,14 +81,12 @@ async function bootstrap() {
   app.use(passport.session());
 
   // CORS Configuration
-  // TODO: Configure based on environment (development vs production)
-  // For now, using placeholder - will be configured via ConfigService
-  app.enableCors({
-    origin: process.env.FRONTEND_URL || 'http://localhost:4200',
-    credentials: true, // Required for session cookies
-    methods: ['GET', 'POST', 'PUT', 'DELETE', 'OPTIONS'],
-    allowedHeaders: ['Content-Type', 'Authorization', 'X-CSRF-Token'],
-  });
+  // Dynamically configure CORS based on environment (development vs production)
+  const nodeEnv = configService.get<string>('app.nodeEnv') || 'development';
+  const allowedOrigins = configService.get<string[]>('cors.allowedOrigins');
+  const corsConfig = getCorsConfig(nodeEnv, allowedOrigins);
+  
+  app.enableCors(corsConfig);
 
   // Global Validation Pipe
   // Automatically validates all incoming requests against DTO classes

@@ -56,12 +56,11 @@ export default () => ({
 
   // CORS Configuration
   cors: {
-    origin: process.env.FRONTEND_URL || 'http://localhost:4200',
-    credentials: true,
-    methods: ['GET', 'POST', 'PUT', 'DELETE', 'OPTIONS'],
-    allowedHeaders: ['Content-Type', 'Authorization', 'X-CSRF-Token'],
-    exposedHeaders: process.env.NODE_ENV === 'development' ? ['Set-Cookie'] : [],
-    maxAge: 86400, // 24 hours
+    // Parse allowed origins from environment variable (comma-separated)
+    allowedOrigins: process.env.ALLOWED_ORIGINS
+      ? process.env.ALLOWED_ORIGINS.split(',').map((origin) => origin.trim())
+      : ['http://localhost:4200'],
+    frontendUrl: process.env.FRONTEND_URL || 'http://localhost:4200',
   },
 
   // Security Configuration
